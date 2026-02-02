@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isToday, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { FiPlus, FiChevronLeft, FiChevronRight, FiCalendar, FiArrowRight } from 'react-icons/fi'
+import { FiPlus, FiChevronLeft, FiChevronRight, FiCalendar, FiArrowRight, FiCheckCircle, FiClock } from 'react-icons/fi'
 
 export default function Attendance() {
   const [sessions, setSessions] = useState([])
@@ -14,6 +14,9 @@ export default function Attendance() {
   const [showNewSession, setShowNewSession] = useState(false)
   const [newSessionDate, setNewSessionDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [selectedTraining, setSelectedTraining] = useState('')
+  const [todayTraining, setTodayTraining] = useState(null)
+  const [todaySession, setTodaySession] = useState(null)
+  const [creatingToday, setCreatingToday] = useState(false)
   const navigate = useNavigate()
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
@@ -36,10 +39,46 @@ export default function Attendance() {
       ])
       setSessions(sessionsRes.data)
       setTrainings(trainingsRes.data)
+
+      // Comprobar si hoy hay entrenamiento
+      const today = new Date()
+      const todayDayOfWeek = today.getDay()
+      const trainingToday = trainingsRes.data.find(t => t.day_of_week === todayDayOfWeek)
+      setTodayTraining(trainingToday)
+
+      // Comprobar si ya existe sesión para hoy
+      const todayStr = format(today, 'yyyy-MM-dd')
+      const existingTodaySession = sessionsRes.data.find(s => s.date === todayStr)
+      setTodaySession(existingTodaySession)
     } catch (error) {
       toast.error('Error al cargar datos')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const goToTodayAttendance = async () => {
+    setCreatingToday(true)
+    try {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      
+      // Si ya existe sesión, ir directamente
+      if (todaySession) {
+        navigate(`/attendance/${todaySession.id}`)
+        return
+      }
+
+      // Crear nueva sesión para hoy
+      const response = await api.post('/attendance/sessions', {
+        date: todayStr,
+        training_id: todayTraining?.id || null
+      })
+      
+      navigate(`/attendance/${response.data.id}`)
+    } catch (error) {
+      toast.error('Error al acceder a la sesión')
+    } finally {
+      setCreatingToday(false)
     }
   }
 
@@ -83,12 +122,67 @@ export default function Attendance() {
         </div>
         <button
           onClick={() => setShowNewSession(!showNewSession)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
         >
           <FiPlus size={20} />
-          Nueva Sesión
+          Sesión Manual
         </button>
       </div>
+
+      {/* TODAY'S TRAINING - Prominent Card */}
+      {todayTraining && (
+        <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
+                <FiCheckCircle size={32} />
+              </div>
+              <div>
+                <p className="text-primary-200 text-sm font-medium">Hoy hay entrenamiento</p>
+                <h2 className="text-2xl font-bold">{todayTraining.day_name}</h2>
+                <div className="flex items-center gap-2 mt-1 text-primary-100">
+                  <FiClock size={16} />
+                  <span>{todayTraining.start_time} - {todayTraining.end_time}</span>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={goToTodayAttendance}
+              disabled={creatingToday}
+              className="flex items-center justify-center gap-2 px-6 py-4 bg-white text-primary-700 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-md min-w-[200px]"
+            >
+              {creatingToday ? (
+                <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <FiCheckCircle size={24} />
+                  <span className="text-lg">
+                    {todaySession ? 'Ver Asistencia' : 'Pasar Lista'}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          {todaySession && (
+            <p className="mt-3 text-primary-200 text-sm">
+              ✓ Ya tienes una sesión creada para hoy
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* No training today */}
+      {!todayTraining && (
+        <div className="bg-gray-100 rounded-xl p-6 text-center">
+          <div className="text-4xl mb-2">😴</div>
+          <h3 className="font-medium text-gray-700">Hoy no hay entrenamiento programado</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+          </p>
+        </div>
+      )}
 
       {/* New Session Form */}
       {showNewSession && (
@@ -222,26 +316,6 @@ export default function Attendance() {
               </div>
             </Link>
           ))}
-        </div>
-      )}
-
-      {/* Quick Access: Today's Training */}
-      {trainings.length > 0 && (
-        <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl p-6 text-white">
-          <h2 className="text-lg font-semibold mb-2">Acceso Rápido</h2>
-          <p className="text-primary-200 mb-4">Crea una sesión para hoy y pasa lista rápidamente</p>
-          <button
-            onClick={() => {
-              setNewSessionDate(format(new Date(), 'yyyy-MM-dd'))
-              const todayTraining = trainings.find(t => t.day_of_week === new Date().getDay())
-              setSelectedTraining(todayTraining?.id || '')
-              createSession()
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-primary-700 font-medium rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <FiPlus size={20} />
-            Pasar Lista Hoy
-          </button>
         </div>
       )}
     </div>
