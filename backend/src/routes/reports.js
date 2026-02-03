@@ -8,12 +8,13 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-// Generar reporte de asistencia
+// Generar reporte de asistencia (filtrado por usuario)
 router.get('/attendance', async (req, res) => {
   const { format, from, to, category, player_id } = req.query;
+  const userId = req.user.id;
   const db = getDb();
 
-  // Construir query base
+  // Construir query base (filtrado por usuario)
   let query = `
     SELECT 
       p.id as player_id,
@@ -29,9 +30,9 @@ router.get('/attendance', async (req, res) => {
     JOIN players p ON a.player_id = p.id
     JOIN training_sessions ts ON a.session_id = ts.id
     LEFT JOIN trainings t ON ts.training_id = t.id
-    WHERE 1=1
+    WHERE p.user_id = ?
   `;
-  const params = [];
+  const params = [userId];
 
   if (from) {
     query += ' AND ts.date >= ?';

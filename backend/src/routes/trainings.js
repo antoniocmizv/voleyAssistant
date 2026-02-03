@@ -9,16 +9,17 @@ router.use(authMiddleware);
 
 const DAYS_OF_WEEK = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-// Obtener todos los entrenamientos configurados
+// Obtener todos los entrenamientos configurados (filtrados por usuario)
 router.get('/', (req, res) => {
   const db = getDb();
   const { active } = req.query;
+  const userId = req.user.id;
 
-  let query = 'SELECT * FROM trainings';
-  const params = [];
+  let query = 'SELECT * FROM trainings WHERE user_id = ?';
+  const params = [userId];
 
   if (active !== undefined) {
-    query += ' WHERE active = ?';
+    query += ' AND active = ?';
     params.push(active === 'true' ? 1 : 0);
   }
 
@@ -35,10 +36,11 @@ router.get('/', (req, res) => {
   res.json(result);
 });
 
-// Obtener un entrenamiento por ID
+// Obtener un entrenamiento por ID (verificar pertenencia al usuario)
 router.get('/:id', (req, res) => {
   const db = getDb();
-  const training = db.prepare('SELECT * FROM trainings WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const training = db.prepare('SELECT * FROM trainings WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!training) {
     return res.status(404).json({ error: 'Entrenamiento no encontrado' });
@@ -50,7 +52,7 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// Crear entrenamiento
+// Crear entrenamiento (asignar al usuario actual)
 router.post('/', [
   body('day_of_week').isInt({ min: 0, max: 6 }).withMessage('Día de la semana inválido (0-6)'),
   body('start_time').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora de inicio inválida'),
@@ -63,14 +65,15 @@ router.post('/', [
   }
 
   const { day_of_week, start_time, end_time, name } = req.body;
+  const userId = req.user.id;
   const db = getDb();
 
   try {
     const trainingName = name || DAYS_OF_WEEK[day_of_week];
     const result = db.prepare(`
-      INSERT INTO trainings (day_of_week, start_time, end_time, name)
-      VALUES (?, ?, ?, ?)
-    `).run(day_of_week, start_time, end_time, trainingName);
+      INSERT INTO trainings (day_of_week, start_time, end_time, name, user_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(day_of_week, start_time, end_time, trainingName, userId);
 
     const training = db.prepare('SELECT * FROM trainings WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({
@@ -83,7 +86,7 @@ router.post('/', [
   }
 });
 
-// Actualizar entrenamiento
+// Actualizar entrenamiento (verificar pertenencia al usuario)
 router.put('/:id', [
   body('day_of_week').optional().isInt({ min: 0, max: 6 }).withMessage('Día de la semana inválido'),
   body('start_time').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora de inicio inválida'),
@@ -95,7 +98,8 @@ router.put('/:id', [
   }
 
   const db = getDb();
-  const training = db.prepare('SELECT * FROM trainings WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const training = db.prepare('SELECT * FROM trainings WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!training) {
     return res.status(404).json({ error: 'Entrenamiento no encontrado' });
@@ -126,10 +130,11 @@ router.put('/:id', [
   }
 });
 
-// Eliminar entrenamiento
+// Eliminar entrenamiento (verificar pertenencia al usuario)
 router.delete('/:id', (req, res) => {
   const db = getDb();
-  const training = db.prepare('SELECT * FROM trainings WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const training = db.prepare('SELECT * FROM trainings WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!training) {
     return res.status(404).json({ error: 'Entrenamiento no encontrado' });

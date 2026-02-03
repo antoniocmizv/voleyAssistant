@@ -8,13 +8,14 @@ const router = express.Router();
 // Middleware de autenticación para todas las rutas
 router.use(authMiddleware);
 
-// Obtener todos los jugadores
+// Obtener todos los jugadores (filtrados por usuario)
 router.get('/', (req, res) => {
   const db = getDb();
   const { active, category } = req.query;
+  const userId = req.user.id;
 
-  let query = 'SELECT * FROM players WHERE 1=1';
-  const params = [];
+  let query = 'SELECT * FROM players WHERE user_id = ?';
+  const params = [userId];
 
   if (active !== undefined) {
     query += ' AND active = ?';
@@ -32,10 +33,11 @@ router.get('/', (req, res) => {
   res.json(players);
 });
 
-// Obtener un jugador por ID
+// Obtener un jugador por ID (verificar que pertenece al usuario)
 router.get('/:id', (req, res) => {
   const db = getDb();
-  const player = db.prepare('SELECT * FROM players WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const player = db.prepare('SELECT * FROM players WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!player) {
     return res.status(404).json({ error: 'Jugador no encontrado' });
@@ -44,7 +46,7 @@ router.get('/:id', (req, res) => {
   res.json(player);
 });
 
-// Crear jugador
+// Crear jugador (asignar al usuario actual)
 router.post('/', [
   body('name').trim().notEmpty().withMessage('Nombre requerido'),
   body('last_name').trim().notEmpty().withMessage('Apellidos requeridos'),
@@ -59,13 +61,14 @@ router.post('/', [
   }
 
   const { name, last_name, phone, position, birth_date, category } = req.body;
+  const userId = req.user.id;
   const db = getDb();
 
   try {
     const result = db.prepare(`
-      INSERT INTO players (name, last_name, phone, position, birth_date, category)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(name, last_name, phone || null, position || null, birth_date || null, category);
+      INSERT INTO players (name, last_name, phone, position, birth_date, category, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(name, last_name, phone || null, position || null, birth_date || null, category, userId);
 
     const player = db.prepare('SELECT * FROM players WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(player);
@@ -75,7 +78,7 @@ router.post('/', [
   }
 });
 
-// Actualizar jugador
+// Actualizar jugador (verificar pertenencia al usuario)
 router.put('/:id', [
   body('name').optional().trim().notEmpty().withMessage('Nombre no puede estar vacío'),
   body('last_name').optional().trim().notEmpty().withMessage('Apellidos no pueden estar vacíos'),
@@ -88,7 +91,8 @@ router.put('/:id', [
   }
 
   const db = getDb();
-  const player = db.prepare('SELECT * FROM players WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const player = db.prepare('SELECT * FROM players WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!player) {
     return res.status(404).json({ error: 'Jugador no encontrado' });
@@ -118,10 +122,11 @@ router.put('/:id', [
   }
 });
 
-// Dar de baja/alta a un jugador
+// Dar de baja/alta a un jugador (verificar pertenencia al usuario)
 router.patch('/:id/toggle-active', (req, res) => {
   const db = getDb();
-  const player = db.prepare('SELECT * FROM players WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const player = db.prepare('SELECT * FROM players WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!player) {
     return res.status(404).json({ error: 'Jugador no encontrado' });
@@ -135,10 +140,11 @@ router.patch('/:id/toggle-active', (req, res) => {
   res.json(updatedPlayer);
 });
 
-// Eliminar jugador (borrado permanente)
+// Eliminar jugador (verificar pertenencia al usuario)
 router.delete('/:id', (req, res) => {
   const db = getDb();
-  const player = db.prepare('SELECT * FROM players WHERE id = ?').get(req.params.id);
+  const userId = req.user.id;
+  const player = db.prepare('SELECT * FROM players WHERE id = ? AND user_id = ?').get(req.params.id, userId);
 
   if (!player) {
     return res.status(404).json({ error: 'Jugador no encontrado' });

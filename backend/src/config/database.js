@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { runMigrations } = require('./migrations');
 
 const dbPath = process.env.DATABASE_URL?.replace('file:', '') || 
   path.join(__dirname, '../../data/voleyassistant.db');
@@ -132,6 +133,9 @@ const initDatabase = async () => {
     }
     console.log('📅 Entrenamientos por defecto creados');
   }
+
+  // Ejecutar migraciones para actualizar esquema sin perder datos
+  runMigrations(database);
 
   return database;
 };
