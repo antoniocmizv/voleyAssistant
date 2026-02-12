@@ -11,6 +11,7 @@ import AttendanceSession from './pages/AttendanceSession'
 import Reports from './pages/Reports'
 import Users from './pages/Users'
 import Profile from './pages/Profile'
+import Calendar from './pages/Calendar'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -30,7 +31,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      
+
       <Route path="/" element={
         <PrivateRoute>
           <Layout />
@@ -46,6 +47,7 @@ function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="users" element={<Users />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="calendar" element={<Calendar />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

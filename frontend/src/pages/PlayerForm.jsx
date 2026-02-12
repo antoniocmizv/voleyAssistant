@@ -28,9 +28,11 @@ export default function PlayerForm() {
     name: '',
     last_name: '',
     phone: '',
+    email: '',
     position: '',
     birth_date: '',
-    category: 'senior'
+    category: 'senior',
+    notes: ''
   })
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(isEditing)
@@ -49,9 +51,11 @@ export default function PlayerForm() {
         name: player.name,
         last_name: player.last_name,
         phone: player.phone || '',
+        email: player.email || '',
         position: player.position || '',
         birth_date: player.birth_date || '',
-        category: player.category
+        category: player.category,
+        notes: player.notes || ''
       })
     } catch (error) {
       toast.error('Error al cargar jugador')
@@ -155,19 +159,36 @@ export default function PlayerForm() {
           </div>
         </div>
 
-        {/* Phone */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Teléfono
-          </label>
-          <input
-            type="tel"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-            placeholder="612 345 678"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Phone */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Teléfono
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              placeholder="612 345 678"
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              placeholder="jugador@ejemplo.com"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -208,17 +229,34 @@ export default function PlayerForm() {
           </div>
         </div>
 
-        {/* Birth Date */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Birth Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha de Nacimiento
+            </label>
+            <input
+              type="date"
+              name="birth_date"
+              value={formData.birth_date}
+              onChange={handleChange}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Notes */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fecha de Nacimiento
+            Notas / Historial
           </label>
-          <input
-            type="date"
-            name="birth_date"
-            value={formData.birth_date}
+          <textarea
+            name="notes"
+            value={formData.notes}
             onChange={handleChange}
+            rows={4}
             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            placeholder="Observaciones, lesiones, historial..."
           />
         </div>
 

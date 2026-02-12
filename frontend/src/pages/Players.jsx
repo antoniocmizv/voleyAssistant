@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { FiPlus, FiEdit2, FiToggleLeft, FiToggleRight, FiTrash2, FiSearch, FiFilter } from 'react-icons/fi'
+import { FiPlus, FiEdit2, FiToggleLeft, FiToggleRight, FiTrash2, FiSearch, FiFilter, FiMessageCircle, FiMail } from 'react-icons/fi'
 
 const CATEGORIES = [
   { value: '', label: 'Todas' },
@@ -178,6 +178,7 @@ export default function Players() {
               <div className="space-y-1 text-sm text-gray-600 mb-4">
                 {player.position && <p>📍 {player.position}</p>}
                 {player.phone && <p>📱 {player.phone}</p>}
+                {player.email && <p>✉️ {player.email}</p>}
                 {player.birth_date && (
                   <p>🎂 {new Date(player.birth_date).toLocaleDateString('es-ES')}</p>
                 )}
@@ -186,28 +187,47 @@ export default function Players() {
               <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                 <Link
                   to={`/players/${player.id}/edit`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors text-sm font-medium"
+                  className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                  title="Editar"
                 >
-                  <FiEdit2 size={16} />
-                  Editar
+                  <FiEdit2 size={18} />
                 </Link>
                 <button
                   onClick={() => toggleActive(player)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors text-sm font-medium ${
-                    player.active 
-                      ? 'text-orange-600 hover:bg-orange-50' 
+                  className={`p-2 rounded-lg transition-colors ${player.active
+                      ? 'text-orange-600 hover:bg-orange-50'
                       : 'text-green-600 hover:bg-green-50'
-                  }`}
+                    }`}
+                  title={player.active ? 'Dar de baja' : 'Dar de alta'}
                 >
-                  {player.active ? <FiToggleLeft size={16} /> : <FiToggleRight size={16} />}
-                  {player.active ? 'Baja' : 'Alta'}
+                  {player.active ? <FiToggleLeft size={18} /> : <FiToggleRight size={18} />}
                 </button>
+                {player.phone && (
+                  <a
+                    href={`https://wa.me/${player.phone.replace(/\s/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="WhatsApp"
+                  >
+                    <FiMessageCircle size={18} />
+                  </a>
+                )}
+                {player.email && (
+                  <a
+                    href={`mailto:${player.email}`}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Enviar Email"
+                  >
+                    <FiMail size={18} />
+                  </a>
+                )}
                 <button
                   onClick={() => deletePlayer(player)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors md:ml-auto"
                   title="Eliminar permanentemente"
                 >
-                  <FiTrash2 size={16} />
+                  <FiTrash2 size={18} />
                 </button>
               </div>
             </div>

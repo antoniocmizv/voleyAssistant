@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { 
-  FiHome, FiUsers, FiCalendar, FiCheckSquare, 
-  FiFileText, FiSettings, FiLogOut, FiMenu, FiX, FiUser 
+import {
+  FiHome, FiUsers, FiCalendar, FiCheckSquare,
+  FiFileText, FiSettings, FiLogOut, FiMenu, FiX, FiUser, FiGrid
 } from 'react-icons/fi'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: FiHome },
+  { name: 'Calendario', href: '/calendar', icon: FiGrid },
   { name: 'Jugadores', href: '/players', icon: FiUsers },
   { name: 'Entrenamientos', href: '/trainings', icon: FiCalendar },
   { name: 'Asistencia', href: '/attendance', icon: FiCheckSquare },
@@ -28,7 +29,7 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const allNavigation = user?.role === 'admin' 
+  const allNavigation = user?.role === 'admin'
     ? [...navigation, ...adminNavigation]
     : navigation
 
@@ -36,7 +37,7 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -56,7 +57,7 @@ export default function Layout() {
               </div>
               <span className="text-white font-bold text-lg">VoleyAssistant</span>
             </div>
-            <button 
+            <button
               className="lg:hidden text-white p-2"
               onClick={() => setSidebarOpen(false)}
             >
@@ -73,8 +74,8 @@ export default function Layout() {
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) => `
                   flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors
-                  ${isActive 
-                    ? 'bg-white text-primary-800' 
+                  ${isActive
+                    ? 'bg-white text-primary-800'
                     : 'text-primary-100 hover:bg-primary-700'
                   }
                 `}
@@ -92,8 +93,8 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-2
-                ${isActive 
-                  ? 'bg-white text-primary-800' 
+                ${isActive
+                  ? 'bg-white text-primary-800'
                   : 'text-primary-100 hover:bg-primary-700'
                 }
               `}

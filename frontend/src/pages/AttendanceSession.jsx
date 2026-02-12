@@ -4,7 +4,7 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { FiArrowLeft, FiCheck, FiX, FiSave } from 'react-icons/fi'
+import { FiArrowLeft, FiCheck, FiX, FiSave, FiMessageCircle } from 'react-icons/fi'
 
 const CATEGORY_COLORS = {
   cadete: 'bg-green-100 text-green-800',
@@ -18,6 +18,7 @@ export default function AttendanceSession() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [attendanceList, setAttendanceList] = useState([])
+  const [confirmations, setConfirmations] = useState([])
   const [pendingPlayers, setPendingPlayers] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -30,7 +31,7 @@ export default function AttendanceSession() {
     try {
       const response = await api.get(`/attendance/sessions/${sessionId}`)
       setSession(response.data.session)
-      
+
       // Combinar asistencia existente con jugadores pendientes
       const existingAttendance = response.data.attendance.map(a => ({
         player_id: a.player_id,
@@ -56,6 +57,7 @@ export default function AttendanceSession() {
 
       setAttendanceList([...existingAttendance, ...pending])
       setPendingPlayers(response.data.pendingPlayers)
+      setConfirmations(response.data.confirmations || [])
     } catch (error) {
       toast.error('Error al cargar la sesión')
       navigate('/attendance')
@@ -121,7 +123,7 @@ export default function AttendanceSession() {
           absence_reason: a.absence_reason || null
         }))
       })
-      
+
       toast.success('Asistencia guardada correctamente')
       fetchSessionData() // Refrescar para marcar como guardado
     } catch (error) {
@@ -216,8 +218,14 @@ export default function AttendanceSession() {
               <div className="flex items-center gap-4">
                 {/* Player Info */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">
+                  <h3 className="font-medium text-gray-900 truncate flex items-center gap-2">
                     {player.name} {player.last_name}
+                    {confirmations.find(c => c.player_id === player.player_id)?.status === 'confirmed' && (
+                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full border border-green-200 uppercase font-bold">Confirmado</span>
+                    )}
+                    {confirmations.find(c => c.player_id === player.player_id)?.status === 'declined' && (
+                      <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full border border-red-200 uppercase font-bold">No asiste</span>
+                    )}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${CATEGORY_COLORS[player.category]}`}>
@@ -233,24 +241,33 @@ export default function AttendanceSession() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => toggleAttendance(player.player_id, true)}
-                    className={`p-3 rounded-lg transition-colors ${
-                      player.attended === true
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'
-                    }`}
+                    className={`p-3 rounded-lg transition-colors ${player.attended === true
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'
+                      }`}
                   >
                     <FiCheck size={24} />
                   </button>
                   <button
                     onClick={() => toggleAttendance(player.player_id, false)}
-                    className={`p-3 rounded-lg transition-colors ${
-                      player.attended === false
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'
-                    }`}
+                    className={`p-3 rounded-lg transition-colors ${player.attended === false
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'
+                      }`}
                   >
                     <FiX size={24} />
                   </button>
+                  {player.phone && (
+                    <a
+                      href={`https://wa.me/${player.phone.replace(/\s/g, '')}?text=${encodeURIComponent(`Hola ${player.name}, ¿confirmas tu asistencia al entrenamiento de hoy? 🏐`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 bg-gray-100 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                      title="Enviar recordatorio"
+                    >
+                      <FiMessageCircle size={24} />
+                    </a>
+                  )}
                 </div>
               </div>
 

@@ -20,17 +20,17 @@ const runMigrations = (db) => {
         // Verificar si la columna ya existe
         const columns = db.prepare("PRAGMA table_info(players)").all();
         const hasUserId = columns.some(col => col.name === 'user_id');
-        
+
         if (!hasUserId) {
           // Añadir columna user_id a players
           db.exec('ALTER TABLE players ADD COLUMN user_id INTEGER REFERENCES users(id)');
-          
+
           // Obtener el ID del primer admin para asignar los datos existentes
           const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1").get();
           if (admin) {
             db.prepare('UPDATE players SET user_id = ? WHERE user_id IS NULL').run(admin.id);
           }
-          
+
           console.log('✅ Migración 001: user_id añadido a players');
         }
       }
@@ -40,15 +40,15 @@ const runMigrations = (db) => {
       up: (db) => {
         const columns = db.prepare("PRAGMA table_info(trainings)").all();
         const hasUserId = columns.some(col => col.name === 'user_id');
-        
+
         if (!hasUserId) {
           db.exec('ALTER TABLE trainings ADD COLUMN user_id INTEGER REFERENCES users(id)');
-          
+
           const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1").get();
           if (admin) {
             db.prepare('UPDATE trainings SET user_id = ? WHERE user_id IS NULL').run(admin.id);
           }
-          
+
           console.log('✅ Migración 002: user_id añadido a trainings');
         }
       }
@@ -58,15 +58,15 @@ const runMigrations = (db) => {
       up: (db) => {
         const columns = db.prepare("PRAGMA table_info(training_sessions)").all();
         const hasUserId = columns.some(col => col.name === 'user_id');
-        
+
         if (!hasUserId) {
           db.exec('ALTER TABLE training_sessions ADD COLUMN user_id INTEGER REFERENCES users(id)');
-          
+
           const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1").get();
           if (admin) {
             db.prepare('UPDATE training_sessions SET user_id = ? WHERE user_id IS NULL').run(admin.id);
           }
-          
+
           console.log('✅ Migración 003: user_id añadido a training_sessions');
         }
       }
@@ -86,12 +86,43 @@ const runMigrations = (db) => {
           console.log('⚠️ Migración 004: índices ya existentes');
         }
       }
+    },
+    {
+      name: '005_player_enhancements_and_confirmations',
+      up: (db) => {
+        // Añadir email y notas a players
+        const columns = db.prepare("PRAGMA table_info(players)").all();
+        if (!columns.some(col => col.name === 'email')) {
+          db.exec('ALTER TABLE players ADD COLUMN email TEXT');
+        }
+        if (!columns.some(col => col.name === 'notes')) {
+          db.exec('ALTER TABLE players ADD COLUMN notes TEXT');
+        }
+
+        // Crear tabla de confirmaciones pre-entrenamiento
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS training_confirmations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'confirmed' CHECK(status IN ('confirmed', 'declined', 'pending')),
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES training_sessions(id),
+            FOREIGN KEY (player_id) REFERENCES players(id),
+            UNIQUE(session_id, player_id)
+          )
+        `);
+
+        console.log('✅ Migración 005: Mejoras de jugadores y confirmaciones listas');
+      }
     }
   ];
 
   // Ejecutar migraciones pendientes
   const executedMigrations = db.prepare('SELECT name FROM migrations').all().map(m => m.name);
-  
+
   for (const migration of migrations) {
     if (!executedMigrations.includes(migration.name)) {
       try {

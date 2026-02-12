@@ -117,11 +117,47 @@ router.get('/sessions/:sessionId', (req, res) => {
     ORDER BY p.last_name, p.name
   `).all(userId, sessionId);
 
+  // Obtener confirmaciones pre-entrenamiento
+  const confirmations = db.prepare(`
+    SELECT * FROM training_confirmations WHERE session_id = ?
+  `).all(sessionId);
+
   res.json({
     session,
     attendance,
-    pendingPlayers: playersWithoutAttendance
+    pendingPlayers: playersWithoutAttendance,
+    confirmations
   });
+});
+
+// Registrar confirmación pre-entrenamiento
+router.post('/confirmations', [
+  body('session_id').isInt(),
+  body('player_id').isInt(),
+  body('status').isIn(['confirmed', 'declined', 'pending'])
+], (req, res) => {
+  const { session_id, player_id, status, notes } = req.body;
+  const userId = req.user.id;
+  const db = getDb();
+
+  try {
+    // Verificar sesión
+    const session = db.prepare('SELECT id FROM training_sessions WHERE id = ? AND user_id = ?').get(session_id, userId);
+    if (!session) return res.status(404).json({ error: 'Sesión no encontrada' });
+
+    db.prepare(`
+      INSERT INTO training_confirmations (session_id, player_id, status, notes)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(session_id, player_id) DO UPDATE SET
+        status = excluded.status,
+        notes = excluded.notes,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(session_id, player_id, status, notes || null);
+
+    res.json({ message: 'Confirmación registrada' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al confirmar' });
+  }
 });
 
 // Registrar asistencia individual (verificar pertenencia)
@@ -345,8 +381,8 @@ router.get('/stats/player/:playerId', (req, res) => {
 
   res.json({
     ...stats,
-    attendance_rate: stats.total_sessions > 0 
-      ? ((stats.attended / stats.total_sessions) * 100).toFixed(1) 
+    attendance_rate: stats.total_sessions > 0
+      ? ((stats.attended / stats.total_sessions) * 100).toFixed(1)
       : 0,
     absences
   });

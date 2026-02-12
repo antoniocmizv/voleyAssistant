@@ -10,6 +10,7 @@ const trainingsRoutes = require('./routes/trainings');
 const attendanceRoutes = require('./routes/attendance');
 const reportsRoutes = require('./routes/reports');
 const usersRoutes = require('./routes/users');
+const analyticsRoutes = require('./routes/analytics');
 
 // Inicializar base de datos
 const { initDatabase } = require('./config/database');
@@ -33,6 +34,7 @@ app.use('/api/trainings', trainingsRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Manejo de errores
 app.use((err, req, res, next) => {
@@ -45,7 +47,7 @@ const startServer = async () => {
   try {
     await initDatabase();
     console.log('✅ Base de datos inicializada');
-    
+
     app.listen(PORT, () => {
       console.log(`🏐 VoleyAssistant API corriendo en puerto ${PORT}`);
     });

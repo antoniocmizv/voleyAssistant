@@ -52,23 +52,25 @@ router.post('/', [
   body('last_name').trim().notEmpty().withMessage('Apellidos requeridos'),
   body('category').isIn(['cadete', 'juvenil', 'junior', 'senior']).withMessage('Categoría inválida'),
   body('phone').optional().trim(),
+  body('email').optional().trim().isEmail().withMessage('Email inválido'),
   body('position').optional().trim(),
-  body('birth_date').optional().isISO8601().withMessage('Fecha de nacimiento inválida')
+  body('birth_date').optional().isISO8601().withMessage('Fecha de nacimiento inválida'),
+  body('notes').optional().trim()
 ], (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, last_name, phone, position, birth_date, category } = req.body;
+  const { name, last_name, phone, email, position, birth_date, category, notes } = req.body;
   const userId = req.user.id;
   const db = getDb();
 
   try {
     const result = db.prepare(`
-      INSERT INTO players (name, last_name, phone, position, birth_date, category, user_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(name, last_name, phone || null, position || null, birth_date || null, category, userId);
+      INSERT INTO players (name, last_name, phone, email, position, birth_date, category, user_id, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(name, last_name, phone || null, email || null, position || null, birth_date || null, category, userId, notes || null);
 
     const player = db.prepare('SELECT * FROM players WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(player);
@@ -83,7 +85,9 @@ router.put('/:id', [
   body('name').optional().trim().notEmpty().withMessage('Nombre no puede estar vacío'),
   body('last_name').optional().trim().notEmpty().withMessage('Apellidos no pueden estar vacíos'),
   body('category').optional().isIn(['cadete', 'juvenil', 'junior', 'senior']).withMessage('Categoría inválida'),
-  body('birth_date').optional().isISO8601().withMessage('Fecha de nacimiento inválida')
+  body('email').optional().trim().isEmail().withMessage('Email inválido'),
+  body('birth_date').optional().isISO8601().withMessage('Fecha de nacimiento inválida'),
+  body('notes').optional().trim()
 ], (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -98,7 +102,7 @@ router.put('/:id', [
     return res.status(404).json({ error: 'Jugador no encontrado' });
   }
 
-  const { name, last_name, phone, position, birth_date, category, active } = req.body;
+  const { name, last_name, phone, email, position, birth_date, category, active, notes } = req.body;
 
   try {
     db.prepare(`
@@ -106,13 +110,15 @@ router.put('/:id', [
         name = COALESCE(?, name),
         last_name = COALESCE(?, last_name),
         phone = COALESCE(?, phone),
+        email = COALESCE(?, email),
         position = COALESCE(?, position),
         birth_date = COALESCE(?, birth_date),
         category = COALESCE(?, category),
         active = COALESCE(?, active),
+        notes = COALESCE(?, notes),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(name, last_name, phone, position, birth_date, category, active, req.params.id);
+    `).run(name, last_name, phone, email, position, birth_date, category, active, notes, req.params.id);
 
     const updatedPlayer = db.prepare('SELECT * FROM players WHERE id = ?').get(req.params.id);
     res.json(updatedPlayer);
